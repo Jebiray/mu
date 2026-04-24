@@ -71,7 +71,7 @@ class FirefoxTriage:
     def run(self, gather_cookies=False):
         if self.conn is None:
             upgrade_to_dploot_connection(target=self.target)
-
+    
         firefox_data = []
         firefox_cookies = []
         # list users
@@ -112,23 +112,33 @@ class FirefoxTriage:
                         )
                     if len(keys) == 0:
                         continue
-
+    
                     for username, pwd, host in logins:
                         decoded_username = None
                         password = None
-
+    
                         for key in keys:
                             try:
-                                decrypted_username = self.decrypt(key=key, iv=username[1], ciphertext=username[2])
-                                decoded_username = decrypted_username.decode("utf-8")
-
-                                decrypted_password = self.decrypt(key=key, iv=pwd[1], ciphertext=pwd[2])
-                                password = decrypted_password.decode("utf-8")
-
-                                break  # Success - stop trying other keys
-                            except (UnicodeDecodeError, Exception):
+                                try:
+                                    decrypted_username = self.decrypt(key=key, iv=username[1], ciphertext=username[2])
+                                    decoded_username = decrypted_username.decode("utf-8")
+                                except Exception as e:
+                                    self.logger.debug(f"Failed to decrypt username for {host}: {e}")
+                                    continue
+                                
+                                try:
+                                    decrypted_password = self.decrypt(key=key, iv=pwd[1], ciphertext=pwd[2])
+                                    password = decrypted_password.decode("utf-8")
+                                except Exception as e:
+                                    self.logger.debug(f"Failed to decrypt password for {host}: {e}")
+                                    continue
+    
+                                if password is not None and decoded_username is not None:
+                                    break
+                            except Exception as e:
+                                self.logger.debug(f"Decryption failed with key: {e}")
                                 continue
-
+    
                         if password is not None and decoded_username is not None:
                             data = FirefoxData(
                                 winuser=user,
