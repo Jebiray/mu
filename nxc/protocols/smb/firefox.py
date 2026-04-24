@@ -282,21 +282,27 @@ class FirefoxTriage:
             asn1data[0][2].asOctets(),
         )
 
+    
     @staticmethod
     def decrypt(key, iv, ciphertext):
         """
         Decrypt ciphered data (user / password) using the key previously found.
         Supports both old format (3DES-CBC) and new Firefox 144+ format (AES-256-CBC).
         """
-        # Determine encryption method based on IV length
-        iv_length = len(iv)
-
-        # Firefox 144+ uses AES-256-CBC with 16-byte IV
-        if iv_length == CBC_IV_LENGTH:
-            return FirefoxTriage.decrypt_aes256_cbc(key, iv, ciphertext)
-        # Older Firefox uses 3DES-CBC with 8-byte IV
-        else:
-            return FirefoxTriage.decrypt_3des_cbc(key, iv, ciphertext)
+        try:
+            iv_length = len(iv)
+    
+            # Firefox 144+ uses AES-256-CBC with 16-byte IV
+            if iv_length == CBC_IV_LENGTH:
+                return FirefoxTriage.decrypt_aes256_cbc(key, iv, ciphertext)
+            # Older Firefox uses 3DES-CBC with 8-byte IV
+            elif iv_length == DES_IV_LENGTH:
+                return FirefoxTriage.decrypt_3des_cbc(key, iv, ciphertext)
+            else:
+                raise ValueError(f"Unknown IV length: {iv_length} (expected {DES_IV_LENGTH} or {CBC_IV_LENGTH})")
+                
+        except Exception as e:
+            return b""
 
     @staticmethod
     def decrypt_aes256_cbc(key, iv, ciphertext):
